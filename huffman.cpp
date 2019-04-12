@@ -1,125 +1,168 @@
 #include<iostream>
-#include<vector>
-#include<algorithm>
 #include<fstream>
+#include<math.h>
+#include<queue>
+#include<map>
+#include<bitset>
 using namespace std;
 struct node
 {
-    char ch;
-    int freq;
-    struct node* left;
-    struct node* right;
-};
-node* createnode(char ch,int freq)
+    int freq=0;
+    char value='-';
+    struct node* left=nullptr;
+    struct node* right=nullptr;
+}*root=nullptr;
+struct node* getnode(int freq,char ch)
 {
-    struct node* newnode=new node;
-    newnode->ch=ch;
+    struct node* newnode= new node;
     newnode->freq=freq;
+    newnode->value=ch;
     newnode->left=nullptr;
     newnode->right=nullptr;
     return newnode;
 }
-void levelorder(struct node *curr,int lvl)
-{
-    if(curr)
-    {
-        if(lvl==1)
-            cout<<curr->freq<<" ";
-        else
-        {
-            levelorder(curr->left,lvl-1);
-            levelorder(curr->right,lvl-1);
-        }
-    }
-}
-void encodefile(struct node* curr,string chartocode[],string code)
+void getcode(string chartocode[],int codelen, struct node* curr,string code)
 {
     if(curr)
     {
         if(!curr->left && !curr->right)
         {
-            chartocode[(int)curr->ch]=code;
+            //int remaining=codelen-code.size();
+            //cout<<curr->value<<" "<<remaining<<endl;
+//            for(int i=0;i<remaining;i++)
+//                code.append("0");
+            chartocode[(int)curr->value]=code;
         }
         else
         {
-            encodefile(curr->left,chartocode,code+'0');
-            encodefile(curr->right,chartocode,code+'1');
+            getcode(chartocode,codelen,curr->left,code+"0");
+            getcode(chartocode,codelen,curr->right,code+"1");
         }
     }
 }
-int main()
+struct cmp
 {
-    int arr[256];
-    for(int i=0;i<256;i++)
-        arr[i]=0;
-    ifstream fin;
-    fin.open("file.txt",ios::in);
-    char ch;
-    while(fin.get(ch))
+    bool operator()(struct node* n1,struct node* n2)
     {
-        arr[(int)ch]++;
+        if(n1->freq>n2->freq)
+            return true;
+        else
+            return false;
     }
-    vector<node*>coll;
+};
+void buildtree(int arr[])
+{
+    priority_queue<struct node*,vector<node*>,cmp>pq; //min heap
     for(int i=0;i<256;i++)
     {
         if(arr[i]>0)
         {
-            struct node* node=createnode((char)i,arr[i]);
-            coll.push_back(node);
+            struct node* newnode=getnode(arr[i],(char)i);
+            pq.push(newnode);
         }
     }
-//    for(auto x:coll)
-//        cout<<x->ch<<endl;
-    struct node* root;
-    while(!coll.empty())
+    while(!pq.empty())
     {
-        int min=1000000;
-        struct node* node_min,*node_second_min;
-        for(auto x:coll)
+        struct node* nullnode,*n1,*n2;
+        n1=pq.top();
+        pq.pop();
+        if(!pq.empty())
         {
-            if(x->freq<=min)
-            {
-                node_min=x;
-                min=x->freq;
-            }
+            n2=pq.top();
+            pq.pop();
+            nullnode=getnode(n1->freq+n2->freq,' ');
+            nullnode->left=n1;
+            nullnode->right=n2;
         }
-        coll.erase(find(coll.begin(),coll.end(),node_min));
-        min=1000000;
-        for(auto x:coll)
+        else
         {
-            if(x->freq<=min)
-            {
-                node_second_min=x;
-                min=x->freq;
-            }
+            nullnode=getnode(n1->freq,' ');
+            nullnode->left=n1;
+            nullnode->right=nullptr;
         }
-        coll.erase(find(coll.begin(),coll.end(),node_second_min));
-        struct node* nullnode=createnode(' ',node_min->freq+node_second_min->freq);
-        nullnode->left=node_min;
-        nullnode->right=node_second_min;
-        if(coll.size()>=1)
-            coll.push_back(nullnode);
+        //cout<<n1->value<<" "<<n2->value<<" "<<nullnode->freq<<endl;
+        if(pq.size()>0)
+            pq.push(nullnode);
         else
             root=nullnode;
     }
-    //cout<<root->freq<<endl;
-    fin.close();
-    string chartocode[256];
+}
+void encode(string filepath)
+{
+    int arr[256];
+    int noofchar=0;
     for(int i=0;i<256;i++)
-        chartocode[i]="-1";
-//    for(int i=1;i<=3;i++)
-//    {
-//        levelorder(root,i);
-//        cout<<endl;
-//    }
-    encodefile(root,chartocode,"");
-    for(int i=0;i<256;i++)
+        arr[i]=0;
+    fstream file;
+    file.open(filepath.c_str(),ios::in);
+    char ch;
+    while(file.get(ch))
     {
-        if(chartocode[i]!="-1")
-        {
-            cout<<(char)i<<" encoded as "<<chartocode[i]<<endl;
-        }
+        noofchar++;
+        arr[(int)ch]++;
     }
-////////////////////////////////
+    file.close();
+
+    buildtree(arr);
+
+    int uniquechar=0;
+    for(int i=0;i<256;i++)
+        if(arr[i]!=0)
+            uniquechar++;
+    int codelen=ceil(log2(uniquechar));
+
+    string chartocode[256];
+    getcode(chartocode,codelen,root,"");
+
+    map<string,char>codetochar;
+    for(int i=0;i<256;i++)
+        if(chartocode[i]!="")
+            codetochar[chartocode[i]]=(char)i;
+
+    string stringofbits;
+    file.open(filepath,ios::in);
+    while(file.get(ch))
+    {
+        stringofbits.append(chartocode[(int)ch]);
+    }
+    file.close();
+    bitset<100000>bits(stringofbits);
+    //cout<<bits;
+    fstream binfile;
+    binfile.open("binfile.bin",ios::out|ios::binary);
+    int bitpos=0;
+    char writevalue;
+    bitset<8>charbit(writevalue);
+    for(int i=0;i<stringofbits.size();i++)
+    {
+        charbit[7-bitpos]=stringofbits[i]-'0';
+        if(bitpos==7)
+        {
+            bitpos=0;
+            long long int i=charbit.to_ulong();
+            writevalue=static_cast<char>(i);
+            binfile.write(&writevalue,sizeof(char));
+        }
+        else
+            bitpos++;
+    }
+    while(bitpos<=7)
+    {
+        charbit[7-bitpos]=0;
+        bitpos++;
+    }
+    long long int i=charbit.to_ulong();
+    writevalue=static_cast<char>(i);
+    binfile.write(&writevalue,sizeof(char));
+    binfile.close();
+    //cout<<codelen;
+    cout<<stringofbits;
+
+}
+int main()
+{
+    string filepath;
+    getline(cin,filepath);
+    encode(filepath);
     return 0;
 }
