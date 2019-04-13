@@ -130,17 +130,29 @@ void encode(string filepath)
     //cout<<bits;
     fstream binfile;
     binfile.open("binfile.bin",ios::out|ios::binary);
+    //writing map
+    binfile.write(reinterpret_cast<char*>(&uniquechar),sizeof(int));  //size of map
+    //cout<<uniquechar<<endl;
+    for(auto x:codetochar)
+    {
+        int len=x.first.size();
+        binfile.write(reinterpret_cast<char*>(&len),sizeof(int)); // size of string
+        binfile.write(x.first.c_str(),x.first.size());
+        binfile.write(&x.second,sizeof(char)); //character
+        //cout<<x.second<<endl;
+    }
+
     int bitpos=0;
     char writevalue;
     bitset<8>charbit(writevalue);
-    for(int i=0;i<stringofbits.size();i++)
+    for(int i=0;stringofbits[i]!='\0';i++)
     {
         charbit[7-bitpos]=stringofbits[i]-'0';
         if(bitpos==7)
         {
             bitpos=0;
-            long long int i=charbit.to_ulong();
-            writevalue=static_cast<char>(i);
+            long long int j=charbit.to_ulong();
+            writevalue=static_cast<char>(j);
             binfile.write(&writevalue,sizeof(char));
         }
         else
@@ -156,13 +168,81 @@ void encode(string filepath)
     binfile.write(&writevalue,sizeof(char));
     binfile.close();
     //cout<<codelen;
-    cout<<stringofbits;
+    //cout<<stringofbits;
 
+}
+void decode(string filepath)
+{
+    map<string,char>codetochar;
+    fstream binfile;
+    binfile.open(filepath,ios::in|ios::binary);
+    int sizeofmap;
+    binfile.read(reinterpret_cast<char*>(&sizeofmap),sizeof(int));
+    for(int i=0;i<sizeofmap;i++)
+    {
+        char ch;
+        int len;
+        binfile.read(reinterpret_cast<char*>(&len),sizeof(int));
+        char* code=new char[len];
+        binfile.read(&code[0],len);
+        string propercode="";
+        for(int j=0;j<len;j++)
+            propercode.push_back(code[j]);
+        //cout<<propercode<<endl;
+        binfile.read(&ch,sizeof(char));
+        //cout<<code<<endl;
+        //cout<<ch<<endl;
+        codetochar[propercode]=ch;
+        delete[]code;
+    }
+//    for(auto x:codetochar)
+//        cout<<x.first<<endl;
+    char ch;
+    string findcode="";
+    fstream decodedfile;
+    decodedfile.open("decodedfile.txt",ios::out);
+    while(binfile.read(&ch,sizeof(char)))
+    {
+        bitset<8>bits(ch);
+        for(int i=0;i<8;i++)
+        {
+            if(bits[7-i]==1)
+                findcode.append("1");
+            else
+                findcode.append("0");
+            if(codetochar.find(findcode)!=codetochar.end())
+            {
+                decodedfile<<codetochar[findcode];
+                findcode="";
+            }
+        }
+    }
+    decodedfile.close();
+    //cout<<findcode;
+    binfile.close();
 }
 int main()
 {
-    string filepath;
-    getline(cin,filepath);
-    encode(filepath);
+    cout<<"Options:"<<endl;
+    cout<<"1:Compress file"<<endl;
+    cout<<"2:Decode a compressed file"<<endl;
+    int option;
+    cout<<"Enter option:";
+    cin>>option;
+    cin.ignore();
+    if(option==1)
+    {
+        cout<<"Enter filepath:";
+        string filepath;
+        getline(cin,filepath);
+        encode(filepath);
+    }
+    else
+    {
+        cout<<"Enter filepath:";
+        string filepath;
+        getline(cin,filepath);
+        decode(filepath);
+    }
     return 0;
 }
