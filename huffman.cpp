@@ -27,10 +27,6 @@ void getcode(string chartocode[],int codelen, struct node* curr,string code)
     {
         if(!curr->left && !curr->right)
         {
-            //int remaining=codelen-code.size();
-            //cout<<curr->value<<" "<<remaining<<endl;
-//            for(int i=0;i<remaining;i++)
-//                code.append("0");
             chartocode[(int)curr->value]=code;
         }
         else
@@ -52,7 +48,7 @@ struct cmp
 };
 void buildtree(int arr[])
 {
-    priority_queue<struct node*,vector<node*>,cmp>pq; //min heap
+    priority_queue<struct node*,vector<node*>,cmp>pq;
     for(int i=0;i<256;i++)
     {
         if(arr[i]>0)
@@ -80,7 +76,6 @@ void buildtree(int arr[])
             nullnode->left=n1;
             nullnode->right=nullptr;
         }
-        //cout<<n1->value<<" "<<n2->value<<" "<<nullnode->freq<<endl;
         if(pq.size()>0)
             pq.push(nullnode);
         else
@@ -127,19 +122,15 @@ void encode(string filepath)
     }
     file.close();
     bitset<100000>bits(stringofbits);
-    //cout<<bits;
     fstream binfile;
-    binfile.open("binfile.bin",ios::out|ios::binary);
-    //writing map
-    binfile.write(reinterpret_cast<char*>(&uniquechar),sizeof(int));  //size of map
-    //cout<<uniquechar<<endl;
+    binfile.open("compressedfile.bin",ios::out|ios::binary);
+    binfile.write(reinterpret_cast<char*>(&uniquechar),sizeof(int));
     for(auto x:codetochar)
     {
         int len=x.first.size();
-        binfile.write(reinterpret_cast<char*>(&len),sizeof(int)); // size of string
+        binfile.write(reinterpret_cast<char*>(&len),sizeof(int));
         binfile.write(x.first.c_str(),x.first.size());
-        binfile.write(&x.second,sizeof(char)); //character
-        //cout<<x.second<<endl;
+        binfile.write(&x.second,sizeof(char));
     }
 
     int bitpos=0;
@@ -167,8 +158,6 @@ void encode(string filepath)
     writevalue=static_cast<char>(i);
     binfile.write(&writevalue,sizeof(char));
     binfile.close();
-    //cout<<codelen;
-    //cout<<stringofbits;
 
 }
 void decode(string filepath)
@@ -188,15 +177,10 @@ void decode(string filepath)
         string propercode="";
         for(int j=0;j<len;j++)
             propercode.push_back(code[j]);
-        //cout<<propercode<<endl;
         binfile.read(&ch,sizeof(char));
-        //cout<<code<<endl;
-        //cout<<ch<<endl;
         codetochar[propercode]=ch;
         delete[]code;
     }
-//    for(auto x:codetochar)
-//        cout<<x.first<<endl;
     char ch;
     string findcode="";
     fstream decodedfile;
@@ -218,7 +202,6 @@ void decode(string filepath)
         }
     }
     decodedfile.close();
-    //cout<<findcode;
     binfile.close();
 }
 int main()
